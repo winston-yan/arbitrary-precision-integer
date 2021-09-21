@@ -76,6 +76,7 @@ std::ostream &operator<<(std::ostream &out, const DecInteger &oth) {
 }
 
 BEGINS(dec_test)
+
 int main() {
     int n = 33;
     DecInteger a(1);

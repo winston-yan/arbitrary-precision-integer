@@ -34,6 +34,12 @@ BigInteger::BigInteger(const BigInteger &oth, bool sign)
 BigInteger::BigInteger(BigInteger &&oth, bool sign) noexcept
 : sign_bit(sign), digits(std::move(oth.digits)) {}
 
+BigInteger::BigInteger(const BigInteger &oth, size_t lo, size_t hi, bool sign = false)
+: sign_bit(sign), digits(hi - lo) {
+    for (auto i = 0; i < hi - lo; ++i)
+        digits[i] = oth[lo + i];
+}
+
 // END of private constructors
 
 BigInteger::BigInteger(std::string s) {
@@ -71,11 +77,25 @@ BigInteger &BigInteger::operator=(BigInteger &&oth) noexcept {
 inline size_t BigInteger::size() const { return digits.size(); }
 
 inline uint32_t BigInteger::operator[](size_t ind) const {
+    if (ind >= size()) 
+        throw std::out_of_range("INDEX out of range");
     return this->digits[ind];
 }
 
-inline uint32_t &BigInteger::operator[](size_t ind) {
+inline uint32_t &BigInteger::operator[](size_t ind) { 
     return this->digits[ind];
+}
+
+inline bool BigInteger::is_negative() const { 
+    return this->sign_bit; 
+}
+
+inline bool BigInteger::is_positive() const { 
+    return !this->sign_bit && !is_zero(); 
+}
+
+inline bool BigInteger::is_zero() const {
+    return digits.size() == 1 && digits[0] == 0; 
 }
 
 inline BigInteger BigInteger::negate() const { 
@@ -124,7 +144,7 @@ void BigInteger::print() const {
 
 bool operator< (const BigInteger &a, const BigInteger &b) {
     if (a.sign_bit ^ b.sign_bit) return a.sign_bit;
-    return a.sign_bit ^ BigInteger::_digits_less_than(a, b);
+    return a.sign_bit ^ BigInteger::_digits_lt(a, b);
 }
 
 bool operator==(const BigInteger &a, const BigInteger &b) {
@@ -151,7 +171,7 @@ inline BigInteger BigInteger::operator-() const {
 
 BigInteger operator+(const BigInteger &a, const BigInteger &b) {
     if (a.sign_bit ^ b.sign_bit) {
-        if (BigInteger::_digits_less_than(a, b)) 
+        if (BigInteger::_digits_lt(a, b)) 
             return BigInteger::_sub_digits(b, a);
         return BigInteger::_sub_digits(a, b);
     }
@@ -159,8 +179,9 @@ BigInteger operator+(const BigInteger &a, const BigInteger &b) {
 }
 
 BigInteger &BigInteger::operator+=(const BigInteger &oth) {
+    if (this == &oth) return this->operator=(*this + oth);
     if (this->sign_bit ^ oth.sign_bit) {
-        if (BigInteger::_digits_less_than(*this, oth))
+        if (BigInteger::_digits_lt(*this, oth))
             return this->operator=(BigInteger::_sub_digits(oth, *this));
         return BigInteger::_fetch_and_sub_digits(oth);
     }
@@ -176,31 +197,54 @@ BigInteger &BigInteger::operator-=(const BigInteger &oth) {
 }
 
 BigInteger operator*(const BigInteger &a, const BigInteger &b) {
-    size_t n1 = a.size(), n2 = b.size();
-    BigInteger ret(n1 + n2, 0, a.sign_bit ^ b.sign_bit);
+    return BigInteger(BigInteger::_mul_digits(a, b), a.sign_bit ^ b.sign_bit);
+}
 
-    for (int i = 0; i < n1; ++i) {
-        for (int j = 0; j < n2; ++j) {
-            ret.__multpl_adder_64(a[i], b[j], i + j);
+BigInteger &BigInteger::operator*=(const BigInteger &oth) {
+    return this->operator=(*this * oth);
+} 
+
+BigInteger operator/(const BigInteger &a, const BigInteger &b) {
+    if (b.is_zero()) 
+        throw std::invalid_argument("DIVIDED By ZERO!");
+    return BigInteger(BigInteger::_div_digits(a, b).first, a.sign_bit ^ b.sign_bit);
+}
+
+BigInteger &BigInteger::operator/=(const BigInteger &oth) {
+    return this->operator=(*this / oth);
+}
+
+BigInteger operator%(const BigInteger &a, const BigInteger &b) {
+    if (b.is_zero()) 
+        throw std::invalid_argument("MODULO By ZERO!");
+    return BigInteger(BigInteger::_div_digits(a, b).second, a.sign_bit ^ b.sign_bit);
+}
+
+BigInteger &BigInteger::operator%=(const BigInteger &oth) {
+    return this->operator=(*this % oth);
+}
+
+BigInteger operator^(const BigInteger &a, uint32_t e) {
+    if (a.is_zero() && !e) 
+        throw std::range_error("ZERO to the power of ZERO is undefined");
+    BigInteger ret(1, 1u), tmp(a);
+    int clz = __builtin_clz(e);
+
+    for (int shift = 0; shift < 32 - clz; ++shift) {
+        std::cout << FG_RED("shift is : ") << shift << std::endl;
+        if (e & (static_cast<uint32_t>(1) << shift)) {
+            std::cout << ret << tmp << std::endl;
+            ret *= tmp;
+            std::cout << ret << std::endl;
         }
+        tmp *= tmp;
     }
-
-    ret.trim();
     return ret;
 }
 
-// BigInteger operator/(const BigInteger &a, const BigInteger &b)
-// BigInteger operator%(const BigInteger &a, const BigInteger &b)
-// BigInteger operator^(const BigInteger &a, const BigInteger &b)
-// BigInteger operator^(const BigInteger &a, uint64_t e);
-
-
-
-// BigInteger &BigInteger::operator*=(const BigInteger &oth) 
-// BigInteger &BigInteger::operator/=(const BigInteger &oth) 
-// BigInteger &BigInteger::operator%=(const BigInteger &oth) 
-// BigInteger &BigInteger::operator^=(const BigInteger &oth) 
-// BigInteger &BigInteger::operator^=(uint64_t e); 
+BigInteger &BigInteger::operator^=(uint32_t e) {
+    return this->operator=(*this ^ e);
+}
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 // auxiliary functions
@@ -258,7 +302,7 @@ BigInteger BigInteger::_add_digits(const BigInteger &a, const BigInteger &b) {
 
 BigInteger &BigInteger::_fetch_and_sub_digits(const BigInteger &oth) {
     D(assert(this != &oth));
-    D(assert(!BigInteger::_digits_less_than(*this, oth)));
+    D(assert(!BigInteger::_digits_lt(*this, oth)));
     BigInteger tmp(oth, false); // sign_bit doesn't matter
     tmp.digits.resize(this->size());
     tmp.__complement();
@@ -273,7 +317,7 @@ BigInteger &BigInteger::_fetch_and_sub_digits(const BigInteger &oth) {
 }
 
 BigInteger BigInteger::_sub_digits(const BigInteger &a, const BigInteger &b) {
-    D(assert(!BigInteger::_digits_less_than(a, b)));
+    D(assert(!BigInteger::_digits_lt(a, b)));
     BigInteger ret(b, a.sign_bit);
     ret.digits.resize(a.size());
     ret.__complement();
@@ -287,7 +331,7 @@ BigInteger BigInteger::_sub_digits(const BigInteger &a, const BigInteger &b) {
     return ret;
 }
     
-void BigInteger::__multpl_adder_64(uint32_t a1, uint32_t a2, size_t pos) {
+void BigInteger::__mul_adder_64(uint32_t a1, uint32_t a2, size_t pos) {
     uint64_t c  = static_cast<uint64_t>(a1)
                 * static_cast<uint64_t>(a2);
     uint32_t carry = 0u;
@@ -313,14 +357,95 @@ void BigInteger::__multpl_adder_64(uint32_t a1, uint32_t a2, size_t pos) {
     return ;
 }
 
-bool BigInteger::_digits_less_than(const BigInteger &a, const BigInteger &b) {
-    if (a.size() - b.size()) return a.size() < b.size();
-    for (int i = a.size() - 1; i >= 0; --i) 
+BigInteger BigInteger::_mul_digits(const BigInteger &a, const BigInteger &b) {
+    size_t n1 = a.size(), n2 = b.size();
+    BigInteger ret(n1 + n2, 0u, a.sign_bit ^ b.sign_bit);
+
+    for (int i = 0; i < n1; ++i) {
+        for (int j = 0; j < n2; ++j) {
+            ret.__mul_adder_64(a[i], b[j], i + j);
+        }
+    }
+
+    ret.trim();
+    return ret;
+}
+
+BigInteger BigInteger::_mul_digits_uint32(const BigInteger &a, uint32_t e) {
+    size_t n1 = a.size();
+    BigInteger ret(n1 + 1, 0u, false);
+
+    for (int i = 0; i < n1; ++i) {
+        ret.__mul_adder_64(a[i], e, i);
+    }
+
+    ret.trim();
+    return ret;
+}
+
+
+std::pair<BigInteger, BigInteger> BigInteger::_div_digits(const BigInteger &a, const BigInteger &b) {
+    D(assert(BigInteger::_digits_le(b, a)));
+    size_t n1 = a.size(), n2 = b.size();
+    int pos = n1 - 1;
+    BigInteger quot(pos + 1, 0u), remd(1, a[pos], false); // do not care sign bit
+    
+    while (1) {
+        while (BigInteger::_digits_lt(remd, b)) {
+            if (pos <= 0) {
+                quot.trim();
+                remd.trim();
+                return {quot, remd};
+            }
+            remd.digits.push_front(a[--pos]);
+        }
+        for (int shift = 31; shift >= 0; --shift) {
+            uint32_t exp = (quot[pos] | (1 << shift));
+            if (BigInteger::_digits_le(_mul_digits_uint32(b, exp), remd))
+                quot[pos] |= (1 << shift);
+        }
+        // calculate remainder
+        remd._fetch_and_sub_digits(_mul_digits_uint32(b, quot[pos]));
+        remd.trim();
+    }
+    return {};
+}
+
+bool BigInteger::_digits_lt(const BigInteger &a, const BigInteger &b) {
+    size_t n1 = a.size(), n2 = b.size();
+    if (n1 - n2) return n1 < n2;
+    for (int i = n1 - 1; i >= 0; --i) 
         if (a[i] - b[i]) return a[i] < b[i];
     return false;
 }
 
+bool BigInteger::_digits_le(const BigInteger &a, const BigInteger &b) {
+    return !BigInteger::_digits_lt(b, a);
+}
 
+bool BigInteger::_digits_lt_range(const BigInteger &a, const BigInteger &b, size_t b_lo, size_t b_hi) {
+    size_t n1 = a.size(), n2 = b_hi - b_lo;
+    if (n1 - n2) return n1 < n2;
+    for (int i = n2 - 1; i >= 0; --i)
+        if (a[i] - b[i + b_lo]) return a[i] < b[i + b_lo];
+    return false;
+}
+
+bool BigInteger::_digits_lt_range(const BigInteger &a, size_t a_lo, size_t a_hi, const BigInteger &b) {
+    size_t n1 = a_hi - a_lo, n2 = b.size();
+    if (n1 - n2) return n1 < n2;
+    for (int i = n1 - 2; i >= 0; --i)
+        if (a[i + a_lo] - b[i]) return a[i + a_lo] < b[i];
+    return false;
+}
+
+bool BigInteger::_digits_le_range(const BigInteger &a, const BigInteger &b, size_t b_lo, size_t b_hi) {
+    return !BigInteger::_digits_lt_range(b, b_lo, b_hi, a);
+}
+
+bool BigInteger::_digits_le_range(const BigInteger &a, size_t a_lo, size_t a_hi, const BigInteger &b) {
+    return !BigInteger::_digits_lt_range(b, a, a_lo, a_hi);
+}
 
 BEGINS(ctor)
 
@@ -358,8 +483,10 @@ BEGINS(dec_in_and_out)
 int main() {
     BigInteger a, b;
     while (std::cin >> a >> b) {
-        std::cout << a << b << (a += b) << std::endl;
-        std::cout << a << std::endl;
+        std::cout << a << b << std::endl;
+        // std::cout << (a / b) << std::endl;
+        // std::cout << (a % b) << std::endl;
+        std::cout << (a ^ 10) << std::endl;
     }
     return 0;
 }

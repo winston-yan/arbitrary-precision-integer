@@ -37,6 +37,7 @@ private:
 
     BigInteger(const BigInteger &, bool);
     BigInteger(BigInteger &&, bool) noexcept;
+    BigInteger(const BigInteger &, size_t, size_t, bool);
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 // utility member functions
@@ -82,10 +83,8 @@ public :
     BigInteger &operator/=(const BigInteger &);
     friend BigInteger operator%(const BigInteger &, const BigInteger &);
     BigInteger &operator%=(const BigInteger &);
-    friend BigInteger operator^(const BigInteger &, const BigInteger &);
-    BigInteger &operator^=(const BigInteger &);
-    friend BigInteger operator^(const BigInteger &, uint64_t);
-    BigInteger &operator^=(uint64_t);
+    friend BigInteger operator^(const BigInteger &, uint32_t);
+    BigInteger &operator^=(uint32_t);
     
     BigInteger &operator++();
     BigInteger &operator--();
@@ -104,8 +103,16 @@ private:
     static BigInteger _add_digits(const BigInteger &, const BigInteger &);
     BigInteger &_fetch_and_sub_digits(const BigInteger &);
     static BigInteger _sub_digits(const BigInteger &, const BigInteger &);
-    void __multpl_adder_64(uint32_t, uint32_t, size_t);
-    static bool _digits_less_than(const BigInteger &, const BigInteger &);
+    void __mul_adder_64(uint32_t, uint32_t, size_t);
+    static BigInteger _mul_digits(const BigInteger &, const BigInteger &);
+    static BigInteger _mul_digits_uint32(const BigInteger &, uint32_t);
+    static std::pair<BigInteger, BigInteger> _div_digits(const BigInteger &, const BigInteger &);
+    static bool _digits_lt(const BigInteger &, const BigInteger &);
+    static bool _digits_le(const BigInteger &, const BigInteger &); 
+    static bool _digits_lt_range(const BigInteger &, const BigInteger &, size_t, size_t);
+    static bool _digits_lt_range(const BigInteger &, size_t, size_t, const BigInteger &);
+    static bool _digits_le_range(const BigInteger &, const BigInteger &, size_t, size_t);
+    static bool _digits_le_range(const BigInteger &, size_t, size_t, const BigInteger &);
 
 
 };
