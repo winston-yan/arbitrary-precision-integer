@@ -8,6 +8,8 @@
 #ifndef _BIG_INTEGER_H
 #define _BIG_INTEGER_H
 
+#include <deque>
+
 #include "binarizor.h"
 #include "dec_integer.h"
 

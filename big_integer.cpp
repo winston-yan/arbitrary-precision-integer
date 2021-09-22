@@ -36,7 +36,7 @@ BigInteger::BigInteger(BigInteger &&oth, bool sign) noexcept
 
 BigInteger::BigInteger(const BigInteger &oth, size_t lo, size_t hi, bool sign = false)
 : sign_bit(sign), digits(hi - lo) {
-    for (auto i = 0; i < hi - lo; ++i)
+    for (size_t i = 0; i < hi - lo; ++i)
         digits[i] = oth[lo + i];
 }
 
@@ -150,7 +150,7 @@ bool operator< (const BigInteger &a, const BigInteger &b) {
 bool operator==(const BigInteger &a, const BigInteger &b) {
     if (a.sign_bit ^ b.sign_bit) return false;
     if (a.size() - b.size()) return false;
-    for (int i = 0; i < a.size(); ++i) {
+    for (size_t i = 0; i < a.size(); ++i) {
         if (a[i] - b[i]) return false;
     }
     return true;
@@ -272,7 +272,7 @@ BigInteger &BigInteger::_fetch_and_add_digits(const BigInteger &oth) {
     this->digits.resize(n);
 
     uint32_t carry = 0u;
-    for (int i = 0; i < n; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         BigInteger::__ripple_adder_32(
             digits[i], 
             i < n2 ? oth[i] : 0u,
@@ -289,7 +289,7 @@ BigInteger BigInteger::_add_digits(const BigInteger &a, const BigInteger &b) {
     BigInteger ret(n, 0u, a.sign_bit);
 
     uint32_t carry = 0u;
-    for (int i = 0; i < n; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         BigInteger::__ripple_adder_32(
             i < n1 ? a[i] : 0u,
             i < n2 ? b[i] : 0u,
@@ -308,7 +308,7 @@ BigInteger &BigInteger::_fetch_and_sub_digits(const BigInteger &oth) {
     tmp.__complement();
     
     uint32_t carry = 1u;
-    for (int i = 0; i < this->size(); ++i) {
+    for (size_t i = 0; i < this->size(); ++i) {
         __ripple_adder_32(digits[i], tmp[i], digits[i], carry);
     }
     // neglect carryout
@@ -323,7 +323,7 @@ BigInteger BigInteger::_sub_digits(const BigInteger &a, const BigInteger &b) {
     ret.__complement();
     
     uint32_t carry = 1u;
-    for (int i = 0; i < ret.size(); ++i) {
+    for (size_t i = 0; i < ret.size(); ++i) {
         __ripple_adder_32(ret[i], a[i], ret[i], carry);
     }
     // neglect carryout
@@ -361,8 +361,8 @@ BigInteger BigInteger::_mul_digits(const BigInteger &a, const BigInteger &b) {
     size_t n1 = a.size(), n2 = b.size();
     BigInteger ret(n1 + n2, 0u, a.sign_bit ^ b.sign_bit);
 
-    for (int i = 0; i < n1; ++i) {
-        for (int j = 0; j < n2; ++j) {
+    for (size_t i = 0; i < n1; ++i) {
+        for (size_t j = 0; j < n2; ++j) {
             ret.__mul_adder_64(a[i], b[j], i + j);
         }
     }
@@ -375,7 +375,7 @@ BigInteger BigInteger::_mul_digits_uint32(const BigInteger &a, uint32_t e) {
     size_t n1 = a.size();
     BigInteger ret(n1 + 1, 0u, false);
 
-    for (int i = 0; i < n1; ++i) {
+    for (size_t i = 0; i < n1; ++i) {
         ret.__mul_adder_64(a[i], e, i);
     }
 
@@ -386,7 +386,7 @@ BigInteger BigInteger::_mul_digits_uint32(const BigInteger &a, uint32_t e) {
 
 std::pair<BigInteger, BigInteger> BigInteger::_div_digits(const BigInteger &a, const BigInteger &b) {
     D(assert(BigInteger::_digits_le(b, a)));
-    size_t n1 = a.size(), n2 = b.size();
+    size_t n1 = a.size();
     int pos = n1 - 1;
     BigInteger quot(pos + 1, 0u), remd(1, a[pos], false); // do not care sign bit
     
@@ -447,55 +447,3 @@ bool BigInteger::_digits_le_range(const BigInteger &a, size_t a_lo, size_t a_hi,
     return !BigInteger::_digits_lt_range(b, a, a_lo, a_hi);
 }
 
-BEGINS(ctor)
-
-#define TEST(x) do { \
-    BigInteger(std::string(#x)).print(); \
-} while (0)
-
-int main() {
-    TEST(-4294967295);
-    TEST(4294967296);
-    TEST(123123123);
-    return 0;
-}
-
-ENDS(ctor)
-
-BEGINS(add)
-
-int main() {
-    BigInteger a(std::string("4294967295"));
-    BigInteger b(std::string("1"));
-    BigInteger c(a + b);
-    c.print();
-    // a._fetch_and_add_digits(b);
-    a.print();
-    b.print();
-    
-    return 0;
-}
-
-ENDS(add)
-
-BEGINS(dec_in_and_out)
-
-int main() {
-    BigInteger a, b;
-    while (std::cin >> a >> b) {
-        std::cout << a << b << std::endl;
-        // std::cout << (a / b) << std::endl;
-        // std::cout << (a % b) << std::endl;
-        std::cout << (a ^ 10) << std::endl;
-    }
-    return 0;
-}
-
-ENDS(dec_in_and_out)
-
-int main() {
-    // ctor::main();
-    // add::main();
-    dec_in_and_out::main();
-    return 0;
-}
