@@ -1,5 +1,5 @@
 # Arbitrary Precision Integer
-An arbitrary precision INTEGER, by using **BASE-2^32 ripple-carry adder**. 
+An arbitrary precision INTEGER class, by using **BASE-2^32 ripple-carry adder**. 
 
 ## Compiling and Usage
 
