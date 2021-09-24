@@ -26,8 +26,10 @@ public :
     BigInteger();
     ~BigInteger() = default;
     
-    BigInteger(std::string);
+    explicit BigInteger(std::string);
+    BigInteger(int64_t); // implicit : convert signed 64bit int to digits
     BigInteger(size_t, uint32_t, bool);
+    
     
     BigInteger(const BigInteger &) = default;
     BigInteger(BigInteger &&) noexcept;

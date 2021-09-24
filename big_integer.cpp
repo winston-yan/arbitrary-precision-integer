@@ -129,7 +129,7 @@ std::ostream &operator<<(std::ostream &out, const BigInteger &oth) {
 std::istream &operator>>(std::istream &in, BigInteger &oth) {
     std::string temp;
     in >> temp;
-    oth = temp;
+    oth = BigInteger(temp);
     return in;
 }
 
