@@ -26,6 +26,16 @@ BigInteger::BigInteger()
 BigInteger::BigInteger(size_t n, uint32_t value, bool sign = false)
 : sign_bit(sign), digits(n, value) {}
 
+BigInteger::BigInteger(int64_t n)
+: sign_bit(n < 0), digits(2, 0u) {
+    uint64_t x;
+    if (sign_bit) x = static_cast<uint64_t>(~n + 1); 
+    else x = static_cast<uint64_t>(n);
+    digits[0] = static_cast<uint32_t>(x & 0xffffffff);
+    digits[1] = static_cast<uint32_t>(x >> 32);
+    this->trim();
+}
+
 // BEGIN of private constructors
 
 BigInteger::BigInteger(const BigInteger &oth, bool sign)

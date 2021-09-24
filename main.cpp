@@ -6,8 +6,13 @@
  ************************************************************************/
 
 #include <iostream>
+#include <limits>
 
 #include "main.h"
+
+#define MSG(msg) do { \
+    std::cout << FG_BLUE(msg) << std::endl; \
+} while (0)
 
 BEGINS(ctor)
 
@@ -17,12 +22,33 @@ BEGINS(ctor)
 
 int main() {
     TEST(-4294967295);
+    TEST(4294967295);
+    TEST(-4294967296);
     TEST(4294967296);
     TEST(123123123);
     return 0;
 }
 
 ENDS(ctor)
+
+BEGINS(trans_ctor)
+
+int main() {
+    BigInteger(static_cast<uint64_t>(-4294967295)).print();
+    BigInteger(static_cast<uint64_t>(4294967295)).print();
+    BigInteger(static_cast<uint64_t>(-4294967296)).print();
+    BigInteger(static_cast<uint64_t>(4294967296)).print();
+    BigInteger(static_cast<uint64_t>(123123123)).print();
+    
+    MSG("boundary test for BigInteger(uint64_t): ");
+    BigInteger(std::numeric_limits<int64_t>::min()).print();
+    BigInteger(std::numeric_limits<int64_t>::max()).print();
+
+    return 0;
+}
+
+
+ENDS(trans_ctor)
 
 BEGINS(add)
 
@@ -57,8 +83,9 @@ ENDS(dec_in_and_out)
 
 
 int main() {
-    // ctor::main();
+    ctor::main();
+    trans_ctor::main();
     // add::main();
-    dec_in_and_out::main();
+    // dec_in_and_out::main();
     return 0;
 }
